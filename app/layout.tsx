@@ -1,6 +1,3 @@
-// app/layout.tsx
-
-import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -8,7 +5,6 @@ export const metadata: Metadata = {
   description: 'Plateforme de publication de mangas pour créateurs amateurs',
 }
 
-// Logo SVG (à garder ou remplacer par votre image)
 const LogoMD = () => (
   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="20" cy="20" r="20" fill="#2563EB"/>
@@ -24,6 +20,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
       <body className="bg-white">
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -41,7 +41,6 @@ export default function RootLayout({
 
         <main>{children}</main>
 
-        {/* FOOTER À METTRE ICI */}
         <footer className="bg-white border-t border-gray-200 mt-20 py-8">
           <div className="container mx-auto px-4">
             <div className="flex flex-col items-center justify-center gap-4">
