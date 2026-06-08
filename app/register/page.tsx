@@ -3,7 +3,6 @@
 import { supabase } from '../../lib/supabase'
 import { useState } from 'react'
 
-// Icône utilisateur
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M20 21V19C20 16.8 18.2 15 16 15H8C5.8 15 4 16.8 4 19V21" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
@@ -11,15 +10,6 @@ const UserIcon = () => (
   </svg>
 )
 
-// Icône email
-const MailIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M22 6L12 13L2 6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-
-// Icône cadenas (mot de passe)
 const LockIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M19 11H5C3.9 11 3 11.9 3 13V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V13C21 11.9 20.1 11 19 11Z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -27,26 +17,6 @@ const LockIcon = () => (
   </svg>
 )
 
-// Icône calendrier (âge)
-const CalendarIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M19 4H5C3.9 4 3 4.9 3 6V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4Z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M8 2V6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M16 2V6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M3 10H21" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-)
-
-// Icône question (comment connaissez-vous)
-const QuestionIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="10" stroke="#6B7280" strokeWidth="2"/>
-    <path d="M12 16V12" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="12" cy="8" r="0.5" fill="#6B7280" stroke="#6B7280" strokeWidth="2"/>
-  </svg>
-)
-
-// Logo MD
 const LogoMD = () => (
   <svg width="60" height="60" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="20" cy="20" r="20" fill="#2563EB"/>
@@ -55,38 +25,28 @@ const LogoMD = () => (
   </svg>
 )
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
-    setMessage('')
+    setError('')
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const username = formData.get('username') as string
-    const age = formData.get('age') as string
-    const howFound = formData.get('how_found') as string
 
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
-      options: {
-        data: {
-          username: username,
-          age: age,
-          how_found: howFound
-        }
-      }
     })
 
     if (error) {
-      setMessage('Erreur : ' + error.message)
+      setError('Email ou mot de passe incorrect')
     } else {
-      setMessage('Compte créé ! Vérifie ton email pour confirmer.')
+      window.location.href = '/dashboard'
     }
     setLoading(false)
   }
@@ -98,46 +58,27 @@ export default function RegisterPage() {
           <LogoMD />
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          Salut, vous êtes nouveau ?
+          Heureux de vous revoir
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Créez votre compte et rejoignez la communauté
+          Connectez-vous à votre compte
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Message d'erreur / succès */}
-            {message && (
+            {error && (
               <div className="text-center text-sm text-red-600">
-                {message}
+                {error}
               </div>
             )}
 
-            {/* Nom */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Nom / Pseudo</label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserIcon />
-                </div>
-                <input
-                  name="username"
-                  type="text"
-                  required
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Votre pseudo"
-                />
-              </div>
-            </div>
-
-            {/* Gmail */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Gmail</label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MailIcon />
+                  <UserIcon />
                 </div>
                 <input
                   name="email"
@@ -149,7 +90,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Mot de passe */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
               <div className="mt-1 relative">
@@ -166,54 +106,21 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Age */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Âge</label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <CalendarIcon />
-                </div>
-                <input
-                  name="age"
-                  type="number"
-                  required
-                  min="13"
-                  max="120"
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="18"
-                />
-              </div>
-            </div>
-
-            {/* Comment connaissez-vous Manga Drop */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Comment connaissez-vous Manga Drop ?</label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <QuestionIcon />
-                </div>
-                <select
-                  name="how_found"
-                  required
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Sélectionnez une option</option>
-                  <option>Réseaux sociaux</option>
-                  <option>Recommandation d'un ami</option>
-                  <option>Recherche Google</option>
-                  <option>Autre</option>
-                </select>
-              </div>
-            </div>
-
             <div>
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? 'Inscription...' : "S'inscrire"}
+                {loading ? 'Connexion...' : 'Se connecter'}
               </button>
+            </div>
+
+            <div className="text-center text-sm">
+              <span className="text-gray-600">Nouveau sur Manga Drop ?</span>{' '}
+              <a href="/register" className="text-blue-600 hover:text-blue-500">
+                Créer un compte
+              </a>
             </div>
           </form>
         </div>
