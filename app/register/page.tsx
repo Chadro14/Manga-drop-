@@ -1,3 +1,8 @@
+'use client'
+
+import { supabase } from '../../lib/supabase'
+import { useState } from 'react'
+
 // Icône utilisateur
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -41,7 +46,7 @@ const QuestionIcon = () => (
   </svg>
 )
 
-// Logo MD (à remplacer par votre logo)
+// Logo MD
 const LogoMD = () => (
   <svg width="60" height="60" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="20" cy="20" r="20" fill="#2563EB"/>
@@ -51,6 +56,41 @@ const LogoMD = () => (
 )
 
 export default function RegisterPage() {
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setMessage('')
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const username = formData.get('username') as string
+    const age = formData.get('age') as string
+    const howFound = formData.get('how_found') as string
+
+    const { error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          username: username,
+          age: age,
+          how_found: howFound
+        }
+      }
+    })
+
+    if (error) {
+      setMessage('Erreur : ' + error.message)
+    } else {
+      setMessage('Compte créé ! Vérifie ton email pour confirmer.')
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -67,7 +107,14 @@ export default function RegisterPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Message d'erreur / succès */}
+            {message && (
+              <div className="text-center text-sm text-red-600">
+                {message}
+              </div>
+            )}
+
             {/* Nom */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Nom / Pseudo</label>
@@ -76,7 +123,9 @@ export default function RegisterPage() {
                   <UserIcon />
                 </div>
                 <input
+                  name="username"
                   type="text"
+                  required
                   className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Votre pseudo"
                 />
@@ -91,7 +140,9 @@ export default function RegisterPage() {
                   <MailIcon />
                 </div>
                 <input
+                  name="email"
                   type="email"
+                  required
                   className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="exemple@gmail.com"
                 />
@@ -106,7 +157,9 @@ export default function RegisterPage() {
                   <LockIcon />
                 </div>
                 <input
+                  name="password"
                   type="password"
+                  required
                   className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="••••••••"
                 />
@@ -121,7 +174,11 @@ export default function RegisterPage() {
                   <CalendarIcon />
                 </div>
                 <input
+                  name="age"
                   type="number"
+                  required
+                  min="13"
+                  max="120"
                   className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="18"
                 />
@@ -135,8 +192,12 @@ export default function RegisterPage() {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <QuestionIcon />
                 </div>
-                <select className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                  <option>Sélectionnez une option</option>
+                <select
+                  name="how_found"
+                  required
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Sélectionnez une option</option>
                   <option>Réseaux sociaux</option>
                   <option>Recommandation d'un ami</option>
                   <option>Recherche Google</option>
@@ -148,9 +209,10 @@ export default function RegisterPage() {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                S'inscrire
+                {loading ? 'Inscription...' : "S'inscrire"}
               </button>
             </div>
           </form>
