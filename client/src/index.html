@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563EB" />
+    <meta name="description" content="Manga Drop — Lis et publie des mangas. Soutiens tes créateurs préférés." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Manga Drop" />
+    <meta property="og:description" content="Lis et publie des mangas. Soutiens tes créateurs préférés." />
+    <meta property="og:image" content="https://files.catbox.moe/zjnv47.jpeg" />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="https://files.catbox.moe/zjnv47.jpeg" />
+
+    <title>Manga Drop</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
