@@ -1,86 +1,109 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { Home, LayoutDashboard, User, Menu } from 'lucide-react';
+// src/components/common/BottomNav.jsx
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Home, LayoutDashboard, User, BookOpen } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-const BottomNav = () => {
-  const location = useLocation();
+const NAV_ITEMS = [
+  { label: 'Accueil',   icon: Home,            path: '/' },
+  { label: 'Catalogue', icon: BookOpen,         path: '/catalog' },
+  { label: 'Dashboard', icon: LayoutDashboard,  path: '/dashboard', authRequired: true },
+  { label: 'Profil',    icon: User,             path: '/profile',   authRequired: true },
+];
+
+export default function BottomNav() {
   const { user } = useAuth();
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  const isActive = (path) => location.pathname === path;
-
-  const linkStyle = (path) => ({
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
-    padding: '8px 0',
-    color: isActive(path) ? '#2563EB' : '#64748B',
-    transition: 'color 0.2s ease',
-    fontSize: '11px',
-    fontWeight: isActive(path) ? '600' : '400',
-    textDecoration: 'none',
-    flex: 1,
-  });
-
-  const iconStyle = (path) => ({
-    width: '22px',
-    height: '22px',
-    color: isActive(path) ? '#2563EB' : '#64748B',
-    transition: 'color 0.2s ease',
-  });
-
-  const handleDashboardClick = (e) => {
-    if (!user) {
-      e.preventDefault();
-      window.location.href = '/auth';
+  function handleNav(item) {
+    if (item.authRequired && !user) {
+      navigate('/auth');
+      return;
     }
-  };
+    if (item.path === '/profile' && user) {
+      navigate(`/profile/${user.id}`);
+      return;
+    }
+    navigate(item.path);
+  }
+
+  function isActive(item) {
+    if (item.path === '/') return location.pathname === '/';
+    if (item.path === '/profile') return location.pathname.startsWith('/profile');
+    return location.pathname.startsWith(item.path);
+  }
 
   return (
-    <nav style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: '#FFFFFF',
-      borderTop: '1px solid #E2E8F0',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '0 16px',
-      height: '60px',
-      zIndex: 1000,
-      maxWidth: '100%',
-    }}>
-      <NavLink to="/" style={linkStyle('/')}>
-        <Home style={iconStyle('/')} />
-        <span>Accueil</span>
-      </NavLink>
+    <>
+      <nav className="bottom-nav" aria-label="Navigation principale">
+        {NAV_ITEMS.map((item) => {
+          const Icon   = item.icon;
+          const active = isActive(item);
 
-      <NavLink
-        to={user ? '/dashboard' : '/auth'}
-        style={linkStyle('/dashboard')}
-        onClick={handleDashboardClick}
-      >
-        <LayoutDashboard style={iconStyle('/dashboard')} />
-        <span>Dashboard</span>
-      </NavLink>
+          return (
+            <button
+              key={item.path}
+              className={`bottom-nav__item ${active ? 'bottom-nav__item--active' : ''}`}
+              onClick={() => handleNav(item)}
+              aria-label={item.label}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon
+                size={22}
+                strokeWidth={active ? 2.5 : 1.8}
+                color={active ? 'var(--color-primary)' : 'var(--color-text-light)'}
+              />
+              <span className="bottom-nav__label">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
-      <NavLink
-        to={user ? `/profile/${user.id}` : '/auth'}
-        style={linkStyle('/profile')}
-      >
-        <User style={iconStyle('/profile')} />
-        <span>Profil</span>
-      </NavLink>
+      <style>{`
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 64px;
+          background: var(--color-white);
+          border-top: 1px solid var(--color-border);
+          display: flex;
+          align-items: center;
+          z-index: 100;
+          padding-bottom: env(safe-area-inset-bottom);
+        }
 
-      <NavLink to="/catalog" style={linkStyle('/catalog')}>
-        <Menu style={iconStyle('/catalog')} />
-        <span>Menu</span>
-      </NavLink>
-    </nav>
+        .bottom-nav__item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          height: 100%;
+          background: none;
+          border: none;
+          cursor: pointer;
+          transition: opacity 0.15s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .bottom-nav__item:active {
+          opacity: 0.7;
+        }
+
+        .bottom-nav__label {
+          font-family: var(--font-sans);
+          font-size: 10px;
+          font-weight: 500;
+          color: var(--color-text-light);
+          transition: color 0.15s;
+        }
+        .bottom-nav__item--active .bottom-nav__label {
+          color: var(--color-primary);
+          font-weight: 600;
+        }
+      `}</style>
+    </>
   );
-};
-
-export default BottomNav;
+}
