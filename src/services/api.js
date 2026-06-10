@@ -1,45 +1,55 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://backend-drop.vercel.app/api';
+// src/services/api.js
 
-const getToken = () => localStorage.getItem('token');
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-drop.vercel.app';
 
-const headers = (withAuth = false) => {
-  const h = { 'Content-Type': 'application/json' };
-  if (withAuth) {
-    const token = getToken();
-    if (token) h['Authorization'] = `Bearer ${token}`;
+async function request(method, path, body = null, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Ajoute le token si présent
+  const token = localStorage.getItem('manga_drop_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  return h;
+
+  const config = {
+    method,
+    headers,
+    credentials: 'include',
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${BASE_URL}${path}`, config);
+
+  // Gestion token expiré
+  if (response.status === 401) {
+    localStorage.removeItem('manga_drop_token');
+    localStorage.removeItem('manga_drop_user');
+    window.dispatchEvent(new Event('auth:logout'));
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.message || data.error || 'Erreur serveur');
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data;
+}
+
+const api = {
+  get:    (path, options)       => request('GET',    path, null, options),
+  post:   (path, body, options) => request('POST',   path, body, options),
+  put:    (path, body, options) => request('PUT',    path, body, options),
+  delete: (path, options)       => request('DELETE', path, null, options),
 };
 
-export const api = {
-  get: async (endpoint, withAuth = false) => {
-    const res = await fetch(`${API_URL}${endpoint}`, { headers: headers(withAuth) });
-    return res.json();
-  },
-
-  post: async (endpoint, data, withAuth = false) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: headers(withAuth),
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  put: async (endpoint, data, withAuth = true) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'PUT',
-      headers: headers(withAuth),
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  delete: async (endpoint, withAuth = true) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'DELETE',
-      headers: headers(withAuth),
-    });
-    return res.json();
-  },
-};
+export default api;
