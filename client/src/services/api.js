@@ -1,6 +1,6 @@
 // src/services/api.js
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-drop.vercel.app';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-drop.vercel.app/api';
 
 async function request(method, path, body = null, options = {}) {
   const headers = {
@@ -8,7 +8,6 @@ async function request(method, path, body = null, options = {}) {
     ...options.headers,
   };
 
-  // Ajoute le token si présent
   const token = localStorage.getItem('manga_drop_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -26,7 +25,6 @@ async function request(method, path, body = null, options = {}) {
 
   const response = await fetch(`${BASE_URL}${path}`, config);
 
-  // Gestion token expiré
   if (response.status === 401) {
     localStorage.removeItem('manga_drop_token');
     localStorage.removeItem('manga_drop_user');
