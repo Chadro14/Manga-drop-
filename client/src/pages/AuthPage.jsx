@@ -92,7 +92,7 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      const endpoint = mode === 'signin' ? '/api/auth/signin' : '/api/auth/signup';
+      const endpoint = mode === 'signin' ? '/auth/signin' : '/auth/signup';
       const body =
         mode === 'signin'
           ? { email: formData.email, password: formData.password }
@@ -104,7 +104,7 @@ export default function AuthPage() {
             };
 
       const data = await api.post(endpoint, body);
-      login(data.user || data);
+      login(data.user || data, data.token);
 
       if (formData.rememberMe) {
         localStorage.setItem('manga_drop_remember_email', formData.email);
@@ -652,7 +652,7 @@ export default function AuthPage() {
           color: var(--color-text);
         }
 
-        .auth-checkbox input {
+          .auth-checkbox input {
           cursor: pointer;
           width: 18px;
           height: 18px;
