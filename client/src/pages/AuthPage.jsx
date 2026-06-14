@@ -5,7 +5,6 @@ import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, RefreshCw } from 'l
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
-// Générateur captcha simple
 function generateCaptcha() {
   const num1 = Math.floor(Math.random() * 10);
   const num2 = Math.floor(Math.random() * 10);
@@ -22,7 +21,7 @@ const SOURCES = [
 ];
 
 export default function AuthPage() {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [mode, setMode] = useState('signin');
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -58,7 +57,6 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    // Validation commune
     if (!formData.email || !formData.password) {
       setError('Email et mot de passe requis.');
       return;
@@ -69,7 +67,6 @@ export default function AuthPage() {
       return;
     }
 
-    // Validation inscription
     if (mode === 'signup') {
       if (!formData.username.trim()) {
         setError('Le pseudo est requis.');
@@ -131,7 +128,6 @@ export default function AuthPage() {
     <>
       <div className="auth-page">
         <div className="auth-card auth-card--enter">
-          {/* Logo */}
           <div className="auth-logo">
             <img
               src="https://files.catbox.moe/zjnv47.jpeg"
@@ -141,9 +137,8 @@ export default function AuthPage() {
             <span className="auth-logo__text">Manga Drop</span>
           </div>
 
-          {/* Titre animé */}
           <h1 className="auth-title auth-title--fade">
-            {mode === 'signin' ? 'Bon retour !' : 'Rejoins-nous'}
+            {mode === 'signin' ? 'Bon retour' : 'Rejoins-nous'}
           </h1>
           <p className="auth-subtitle auth-subtitle--fade">
             {mode === 'signin'
@@ -151,7 +146,6 @@ export default function AuthPage() {
               : 'Crée ton compte et découvre des milliers de mangas.'}
           </p>
 
-          {/* Onglets */}
           <div className="auth-tabs">
             <button
               className={`auth-tab ${mode === 'signin' ? 'auth-tab--active' : ''}`}
@@ -174,9 +168,7 @@ export default function AuthPage() {
             </button>
           </div>
 
-          {/* Formulaire */}
           <form className="auth-form" onSubmit={handleSubmit}>
-            {/* Pseudo (inscription) */}
             {mode === 'signup' && (
               <div className="auth-field auth-field--slide">
                 <label className="auth-label" htmlFor="username">
@@ -199,7 +191,6 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Email */}
             <div className="auth-field auth-field--slide">
               <label className="auth-label" htmlFor="email">
                 Email
@@ -220,7 +211,6 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* Mot de passe */}
             <div className="auth-field auth-field--slide">
               <label className="auth-label" htmlFor="password">
                 Mot de passe
@@ -253,7 +243,6 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* Confirmation mot de passe (inscription) */}
             {mode === 'signup' && (
               <div className="auth-field auth-field--slide">
                 <label className="auth-label" htmlFor="passwordConfirm">
@@ -275,7 +264,6 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Comment avez-vous connu (inscription) */}
             {mode === 'signup' && (
               <div className="auth-field auth-field--slide">
                 <label className="auth-label" htmlFor="source">
@@ -297,7 +285,6 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Captcha (inscription) */}
             {mode === 'signup' && (
               <div className="auth-field auth-field--slide">
                 <label className="auth-label">
@@ -325,7 +312,6 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Se souvenir de moi */}
             {mode === 'signin' && (
               <label className="auth-checkbox">
                 <input
@@ -338,12 +324,10 @@ export default function AuthPage() {
               </label>
             )}
 
-            {/* Erreur */}
             {error && (
               <p className="auth-error auth-error--shake">{error}</p>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               className="auth-submit auth-submit--pulse"
@@ -367,9 +351,8 @@ export default function AuthPage() {
             </button>
           </form>
 
-          {/* Lien bas */}
           <p className="auth-switch auth-switch--fade">
-            {mode === 'signin' ? "Pas encore de compte ? " : "Déjà un compte ? "}
+            {mode === 'signin' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
             <button
               className="auth-switch__link"
               onClick={() => {
@@ -382,9 +365,8 @@ export default function AuthPage() {
             </button>
           </p>
 
-          {/* Note Google OAuth */}
           <p className="auth-note">
-            💡 Connexion Google à configurer avec une clé OAuth. Contacte-nous pour les détails.
+            Connexion Google à configurer avec une clé OAuth. Contacte-nous pour les détails.
           </p>
         </div>
       </div>
@@ -652,7 +634,7 @@ export default function AuthPage() {
           color: var(--color-text);
         }
 
-          .auth-checkbox input {
+        .auth-checkbox input {
           cursor: pointer;
           width: 18px;
           height: 18px;
