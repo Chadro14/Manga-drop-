@@ -1,58 +1,184 @@
-// src/services/api.js
+// services/api.js - Version corrigée pour Manga Drop
+import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-drop.vercel.app/api';
+// Configuration de base
+const API_URL = 'https://backend-drop.vercel.app/api';
 
-async function request(method, path, body = null, options = {}) {
-  const headers = {
+// Création de l'instance axios
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
     'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  },
+  timeout: 15000,
+});
 
-  const token = localStorage.getItem('manga_drop_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+// Intercepteur pour ajouter le token JWT à chaque requête
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('manga_drop_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  const config = {
-    method,
-    headers,
-    credentials: 'include',
-  };
-
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}${path}`, config);
-
-    if (response.status === 401) {
+// Intercepteur pour gérer les erreurs globalement
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expiré ou invalide
       localStorage.removeItem('manga_drop_token');
       localStorage.removeItem('manga_drop_user');
-      window.dispatchEvent(new Event('auth:logout'));
+      // Rediriger vers la page de connexion
+      window.location.href = '/auth';
     }
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const error = new Error(data.message || data.error || 'Erreur serveur');
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
+    return Promise.reject(error);
   }
+);
+
+// Fonction d'inscription (register)
+export async function registerUser(email, username, password) {
+  const response = await api.post('/auth?action=register', {
+    email,
+    username,
+    password,
+  });
+  return response.data;
 }
 
-const api = {
-  get: (path, options) => request('GET', path, null, options),
-  post: (path, body, options) => request('POST', path, body, options),
-  put: (path, body, options) => request('PUT', path, body, options),
-  delete: (path, options) => request('DELETE', path, null, options),
-};
+// Fonction de connexion (login)
+export async function loginUser(email, password) {
+  const response = await api.post('/auth?action=login', {
+    email,
+    password,
+  });
+  return response.data;
+}
 
+// Fonction de déconnexion (logout)
+export async function logoutUser() {
+  const response = await api.post('/auth?action=logout');
+  return response.data;
+}
+
+// Récupérer le profil utilisateur
+export async function getProfile() {
+  const response = await api.get('/users?action=profile');
+  return response.data;
+}
+
+// Mettre à jour le profil
+export async function updateProfile(data) {
+  const response = await api.put('/users?action=update-profile', data);
+  return response.data;
+}
+
+// Récupérer la liste des mangas
+export async function getMangaList(filters = {}) {
+  const params = new URLSearchParams({ action: 'list', ...filters });
+  const response = await api.get(`/manga?${params}`);
+  return response.data;
+}
+
+// Récupérer les meilleurs mangas
+export async function getBestManga(limit = 10) {
+  const response = await api.get(`/manga?action=best&limit=${limit}`);
+  return response.data;
+}
+
+// Récupérer les derniers mangas
+export async function getNewestManga(limit = 10) {
+  const response = await api.get(`/manga?action=newest&limit=${limit}`);
+  return response.data;
+}
+
+// Récupérer un manga par son ID
+export async function getMangaById(id) {
+  const response = await api.get(`/manga?action=detail&id=${id}`);
+  return response.data;
+}
+
+// Créer un manga (nécessite token)
+export async function createManga(data) {
+  const response = await api.post('/manga?action=create', data);
+  return response.data;
+}
+
+// Ajouter un chapitre à une série
+export async function publishChapter(data) {
+  const response = await api.post('/manga?action=publish-chapter', data);
+  return response.data;
+}
+
+// Ajouter une vue à un chapitre
+export async function addView(chapterId) {
+  const response = await api.post('/manga?action=add-view', { chapter_id: chapterId });
+  return response.data;
+}
+
+// Liker ou unliker un chapitre
+export async function toggleLike(chapterId) {
+  const response = await api.post('/social?action=like', { chapter_id: chapterId });
+  return response.data;
+}
+
+// Ajouter un commentaire
+export async function addComment(chapterId, content, parentId = null) {
+  const response = await api.post('/social?action=comment', {
+    chapter_id: chapterId,
+    content,
+    parent_id: parentId,
+  });
+  return response.data;
+}
+
+// Récupérer les commentaires d'un chapitre
+export async function getComments(chapterId) {
+  const response = await api.get(`/social?action=comments&chapter_id=${chapterId}`);
+  return response.data;
+}
+
+// Suivre un créateur
+export async function toggleFollow(creatorId) {
+  const response = await api.post('/social?action=follow', { creator_id: creatorId });
+  return response.data;
+}
+
+// Récupérer les followers d'un utilisateur
+export async function getFollowers(userId) {
+  const response = await api.get(`/social?action=followers&user_id=${userId}`);
+  return response.data;
+}
+
+// Récupérer les abonnements d'un utilisateur
+export async function getFollowing(userId) {
+  const response = await api.get(`/social?action=following&user_id=${userId}`);
+  return response.data;
+}
+
+// Devenir créateur
+export async function becomeCreator() {
+  const response = await api.post('/users?action=become-creator');
+  return response.data;
+}
+
+// Récupérer les statistiques d'un créateur
+export async function getStats() {
+  const response = await api.get('/users?action=stats');
+  return response.data;
+}
+
+// Récupérer les mangas d'un créateur
+export async function getUserMangas(userId) {
+  const response = await api.get(`/users?action=user-mangas&user_id=${userId}`);
+  return response.data;
+}
+
+// Export par défaut
 export default api;
