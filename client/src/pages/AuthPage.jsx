@@ -1,16 +1,9 @@
 // src/pages/AuthPage.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import api from '../services/api';
-
-function generateCaptcha() {
-  const num1 = Math.floor(Math.random() * 10);
-  const num2 = Math.floor(Math.random() * 10);
-  const operation = ['+', '-'][Math.floor(Math.random() * 2)];
-  return { num1, num2, operation, answer: operation === '+' ? num1 + num2 : num1 - num2 };
-}
+import { registerUser, loginUser } from '../services/api';
 
 const SOURCES = [
   { value: 'google', label: 'Google' },
@@ -28,16 +21,22 @@ export default function AuthPage() {
     password: '',
     passwordConfirm: '',
     source: 'google',
-    captchaAnswer: '',
     rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [captcha, setCaptcha] = useState(generateCaptcha());
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Remplir l'email si "Se souvenir de moi"
+    const remembered = localStorage.getItem('manga_drop_remember_email');
+    if (remembered) {
+      setFormData((f) => ({ ...f, email: remembered, rememberMe: true }));
+    }
+  }, []);
 
   function handleChange(e) {
     const { name, type, checked, value } = e.target;
@@ -46,11 +45,6 @@ export default function AuthPage() {
       [name]: type === 'checkbox' ? checked : value,
     }));
     setError('');
-  }
-
-  function refreshCaptcha() {
-    setCaptcha(generateCaptcha());
-    setFormData((f) => ({ ...f, captchaAnswer: '' }));
   }
 
   async function handleSubmit(e) {
@@ -76,41 +70,30 @@ export default function AuthPage() {
         setError('Les mots de passe ne correspondent pas.');
         return;
       }
-      if (!formData.captchaAnswer) {
-        setError('Veuillez répondre au captcha.');
-        return;
-      }
-      if (parseInt(formData.captchaAnswer) !== captcha.answer) {
-        setError('Réponse captcha incorrecte.');
-        refreshCaptcha();
-        return;
-      }
     }
 
     setLoading(true);
     try {
-      const endpoint = mode === 'signin' ? '/auth/signin' : '/auth/signup';
-      const body =
-        mode === 'signin'
-          ? { email: formData.email, password: formData.password }
-          : {
-              email: formData.email,
-              password: formData.password,
-              username: formData.username,
-              how_you_found_us: formData.source,
-            };
+      let data;
+      if (mode === 'signin') {
+        data = await loginUser(formData.email, formData.password);
+      } else {
+        data = await registerUser(formData.email, formData.username, formData.password);
+      }
 
-      const data = await api.post(endpoint, body);
-      login(data.user || data, data.token);
+      login(data.user, data.token);
 
       if (formData.rememberMe) {
         localStorage.setItem('manga_drop_remember_email', formData.email);
+      } else {
+        localStorage.removeItem('manga_drop_remember_email');
       }
 
       navigate('/');
     } catch (err) {
       setError(
-        err?.message ||
+        err?.response?.data?.error ||
+          err?.message ||
           (mode === 'signin'
             ? 'Email ou mot de passe incorrect.'
             : 'Inscription échouée, réessaie.')
@@ -161,7 +144,6 @@ export default function AuthPage() {
               onClick={() => {
                 setMode('signup');
                 setError('');
-                setCaptcha(generateCaptcha());
               }}
             >
               Inscription
@@ -285,33 +267,6 @@ export default function AuthPage() {
               </div>
             )}
 
-            {mode === 'signup' && (
-              <div className="auth-field auth-field--slide">
-                <label className="auth-label">
-                  Captcha : {captcha.num1} {captcha.operation} {captcha.num2} = ?
-                </label>
-                <div className="auth-captcha">
-                  <input
-                    type="number"
-                    name="captchaAnswer"
-                    placeholder="Réponse"
-                    value={formData.captchaAnswer}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    className="auth-input"
-                  />
-                  <button
-                    type="button"
-                    className="auth-captcha-refresh"
-                    onClick={refreshCaptcha}
-                    title="Nouveau captcha"
-                  >
-                    <RefreshCw size={18} color="#2563EB" strokeWidth={2} />
-                  </button>
-                </div>
-              </div>
-            )}
-
             {mode === 'signin' && (
               <label className="auth-checkbox">
                 <input
@@ -358,15 +313,10 @@ export default function AuthPage() {
               onClick={() => {
                 setMode(mode === 'signin' ? 'signup' : 'signin');
                 setError('');
-                setCaptcha(generateCaptcha());
               }}
             >
               {mode === 'signin' ? "S'inscrire" : 'Se connecter'}
             </button>
-          </p>
-
-          <p className="auth-note">
-            Connexion Google à configurer avec une clé OAuth. Contacte-nous pour les détails.
           </p>
         </div>
       </div>
@@ -398,7 +348,7 @@ export default function AuthPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--color-background);
+          background: var(--color-background, #F8FAFC);
           padding: 24px 16px;
           animation: fadeIn 0.5s ease-out;
         }
@@ -406,8 +356,8 @@ export default function AuthPage() {
         .auth-card {
           width: 100%;
           max-width: 420px;
-          background: var(--color-white);
-          border: 1px solid var(--color-border);
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
           border-radius: 20px;
           padding: 32px 28px;
           display: flex;
@@ -435,18 +385,18 @@ export default function AuthPage() {
         }
 
         .auth-logo__text {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 18px;
           font-weight: 700;
-          color: var(--color-primary);
+          color: #2563EB;
           letter-spacing: -0.02em;
         }
 
         .auth-title {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 22px;
           font-weight: 700;
-          color: var(--color-text);
+          color: #0F172A;
           margin: 0 0 6px;
           letter-spacing: -0.02em;
         }
@@ -456,9 +406,9 @@ export default function AuthPage() {
         }
 
         .auth-subtitle {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 14px;
-          color: var(--color-text-light);
+          color: #64748B;
           margin: 0 0 22px;
           line-height: 1.5;
           animation: fadeIn 0.6s ease-out 0.2s backwards;
@@ -470,7 +420,7 @@ export default function AuthPage() {
 
         .auth-tabs {
           display: flex;
-          background: var(--color-background);
+          background: #F1F5F9;
           border-radius: 10px;
           padding: 3px;
           margin-bottom: 22px;
@@ -482,18 +432,18 @@ export default function AuthPage() {
           padding: 8px 0;
           border: none;
           background: transparent;
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 14px;
           font-weight: 500;
-          color: var(--color-text-light);
+          color: #64748B;
           border-radius: 8px;
           cursor: pointer;
           transition: background 0.2s, color 0.2s;
         }
 
         .auth-tab--active {
-          background: var(--color-white);
-          color: var(--color-text);
+          background: #FFFFFF;
+          color: #0F172A;
           font-weight: 600;
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
         }
@@ -521,27 +471,27 @@ export default function AuthPage() {
         .auth-field--slide:nth-child(5) { animation-delay: 0.3s; }
 
         .auth-label {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 13px;
           font-weight: 500;
-          color: var(--color-text);
+          color: #0F172A;
         }
 
         .auth-input-wrap {
           display: flex;
           align-items: center;
           gap: 10px;
-          border: 1px solid var(--color-border);
+          border: 1px solid #E2E8F0;
           border-radius: 10px;
           padding: 0 12px;
           height: 44px;
-          background: var(--color-background);
+          background: #F8FAFC;
           transition: border-color 0.2s, background 0.2s;
         }
 
         .auth-input-wrap:focus-within {
-          border-color: var(--color-primary);
-          background: var(--color-white);
+          border-color: #2563EB;
+          background: #FFFFFF;
           box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
@@ -549,9 +499,9 @@ export default function AuthPage() {
           flex: 1;
           border: none;
           background: transparent;
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 15px;
-          color: var(--color-text);
+          color: #0F172A;
           outline: none;
         }
 
@@ -576,52 +526,22 @@ export default function AuthPage() {
 
         .auth-select {
           width: 100%;
-          border: 1px solid var(--color-border);
+          border: 1px solid #E2E8F0;
           border-radius: 10px;
           padding: 10px 12px;
           height: 44px;
-          background: var(--color-background);
-          font-family: var(--font-sans);
+          background: #F8FAFC;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 15px;
-          color: var(--color-text);
+          color: #0F172A;
           cursor: pointer;
           transition: border-color 0.2s;
         }
 
         .auth-select:focus {
-          border-color: var(--color-primary);
+          border-color: #2563EB;
           outline: none;
           box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .auth-captcha {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .auth-captcha .auth-input {
-          font-size: 16px;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .auth-captcha-refresh {
-          flex-shrink: 0;
-          width: 44px;
-          height: 44px;
-          border: 1px solid var(--color-border);
-          border-radius: 10px;
-          background: var(--color-background);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .auth-captcha-refresh:hover {
-          background: #EFF6FF;
         }
 
         .auth-checkbox {
@@ -629,9 +549,9 @@ export default function AuthPage() {
           align-items: center;
           gap: 8px;
           cursor: pointer;
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 13px;
-          color: var(--color-text);
+          color: #0F172A;
         }
 
         .auth-checkbox input {
@@ -641,9 +561,9 @@ export default function AuthPage() {
         }
 
         .auth-error {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 13px;
-          color: var(--color-danger);
+          color: #DC2626;
           background: #FEF2F2;
           border: 1px solid #FECACA;
           border-radius: 8px;
@@ -662,9 +582,9 @@ export default function AuthPage() {
           gap: 8px;
           width: 100%;
           height: 46px;
-          background: var(--color-primary);
+          background: #2563EB;
           color: white;
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 15px;
           font-weight: 600;
           border: none;
@@ -675,7 +595,7 @@ export default function AuthPage() {
         }
 
         .auth-submit:hover:not(:disabled) {
-          background: var(--color-primary-hover);
+          background: #1D4ED8;
         }
 
         .auth-submit:disabled {
@@ -696,9 +616,9 @@ export default function AuthPage() {
         }
 
         .auth-switch {
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 13px;
-          color: var(--color-text-light);
+          color: #64748B;
           text-align: center;
           margin: 18px 0 0;
         }
@@ -710,10 +630,10 @@ export default function AuthPage() {
         .auth-switch__link {
           background: none;
           border: none;
-          color: var(--color-primary);
+          color: #2563EB;
           font-weight: 600;
           cursor: pointer;
-          font-family: var(--font-sans);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 13px;
           padding: 0;
           transition: opacity 0.2s;
@@ -722,18 +642,6 @@ export default function AuthPage() {
         .auth-switch__link:hover {
           text-decoration: underline;
           opacity: 0.8;
-        }
-
-        .auth-note {
-          font-family: var(--font-sans);
-          font-size: 12px;
-          color: var(--color-text-light);
-          text-align: center;
-          margin: 14px 0 0;
-          padding: 8px;
-          background: #F0F9FF;
-          border-radius: 6px;
-          animation: fadeIn 0.6s ease-out 0.6s backwards;
         }
       `}</style>
     </>
