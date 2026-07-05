@@ -1,68 +1,53 @@
-// src/hooks/useApi.js
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
 
-/**
- * Hook pour un appel API automatique au montage.
- * @param {string} path - Route API ex: '/api/manga'
- * @param {object} options - { skip: bool } pour retarder l'appel
- */
-export function useApi(path, options = {}) {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(!options.skip);
-  const [error, setError]     = useState(null);
-  const abortRef              = useRef(null);
-
-  const fetch = useCallback(async (overridePath) => {
-    const target = overridePath || path;
-    if (!target) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await api.get(target);
-      setData(result);
-    } catch (err) {
-      setError(err.message || 'Erreur');
-    } finally {
-      setLoading(false);
-    }
-  }, [path]);
+export function useAuth() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!options.skip && path) {
-      fetch();
-    }
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, [path, options.skip]);
-
-  return { data, loading, error, refetch: fetch };
-}
-
-/**
- * Hook pour un appel API manuel (POST, PUT, DELETE).
- * @param {function} apiFn - Fonction async qui fait l'appel
- */
-export function useApiMutation() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
-
-  const mutate = useCallback(async (apiFn, ...args) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiFn(...args);
-      return result;
-    } catch (err) {
-      setError(err.message || 'Erreur');
-      throw err;
-    } finally {
+    const token = localStorage.getItem('token');
+    if (!token) {
       setLoading(false);
+      return;
     }
+    api.get('/api/auth?action=me')
+      .then((res) => setUser(res.data))
+      .catch(() => localStorage.removeItem('token'))
+      .finally(() => setLoading(false));
   }, []);
 
-  return { mutate, loading, error };
+  const login = async (email, password) => {
+    setError(null);
+    try {
+      const { data } = await api.post('/api/auth?action=login', { email, password });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur de connexion');
+      throw err;
+    }
+  };
+
+  const register = async (email, password, username) => {
+    setError(null);
+    try {
+      const { data } = await api.post('/api/auth?action=register', { email, password, username });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      setError(err.response?.data?.error || "Erreur d'inscription");
+      throw err;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
+  return { user, loading, error, login, register, logout };
 }
