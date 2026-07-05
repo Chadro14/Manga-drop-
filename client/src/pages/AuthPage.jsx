@@ -1,18 +1,24 @@
-// AuthPage.jsx - Version simplifiée et corrigée
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { registerUser, loginUser } from '../services/api';
 
+const MODES = {
+  SIGNIN: 'signin',
+  SIGNUP: 'signup',
+};
+
+const INITIAL_FORM = {
+  username: '',
+  email: '',
+  password: '',
+  passwordConfirm: '',
+};
+
 export default function AuthPage() {
-  const [mode, setMode] = useState('signin');
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-  });
+  const [mode, setMode] = useState(MODES.SIGNIN);
+  const [formData, setFormData] = useState(INITIAL_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,52 +26,70 @@ export default function AuthPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError('');
+  }, []);
+
+  const switchMode = useCallback((newMode) => {
+    setMode(newMode);
+    setError('');
+    setFormData(INITIAL_FORM);
+  }, []);
+
+  const validate = () => {
+    const { email, password, username, passwordConfirm } = formData;
+
+    if (!email.trim() || !password) {
+      return 'Email et mot de passe requis.';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Email invalide.';
+    }
+
+    if (password.length < 6) {
+      return 'Le mot de passe doit faire au moins 6 caractères.';
+    }
+
+    if (mode === MODES.SIGNUP) {
+      if (!username.trim()) {
+        return 'Le pseudo est requis.';
+      }
+      if (username.trim().length < 3) {
+        return 'Le pseudo doit faire au moins 3 caractères.';
+      }
+      if (password !== passwordConfirm) {
+        return 'Les mots de passe ne correspondent pas.';
+      }
+    }
+
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    const { email, password, username, passwordConfirm } = formData;
-
-    if (!email || !password) {
-      setError('Email et mot de passe requis.');
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
       return;
-    }
-
-    if (password.length < 6) {
-      setError('Le mot de passe doit faire au moins 6 caractères.');
-      return;
-    }
-
-    if (mode === 'signup') {
-      if (!username.trim()) {
-        setError('Le pseudo est requis.');
-        return;
-      }
-      if (password !== passwordConfirm) {
-        setError('Les mots de passe ne correspondent pas.');
-        return;
-      }
     }
 
     setLoading(true);
 
     try {
-      let data;
-      if (mode === 'signin') {
-        data = await loginUser(email, password);
-      } else {
-        data = await registerUser(email, username, password);
-      }
+      const { email, password, username } = formData;
+      const data = mode === MODES.SIGNIN
+        ? await loginUser(email, password)
+        : await registerUser(email, username.trim(), password);
 
-      if (data.token && data.user) {
+      if (data?.token && data?.user) {
         login(data.user, data.token);
-        navigate('/');
+        navigate('/', { replace: true });
       } else {
         setError('Erreur: réponse du serveur invalide.');
       }
@@ -76,46 +100,66 @@ export default function AuthPage() {
     }
   };
 
+  const isSignup = mode === MODES.SIGNUP;
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <img src="https://files.catbox.moe/zjnv47.jpeg" alt="Manga Drop" className="auth-logo__img" />
+          <img
+            src="https://files.catbox.moe/zjnv47.jpeg"
+            alt="Manga Drop"
+            className="auth-logo__img"
+            loading="lazy"
+          />
           <span className="auth-logo__text">Manga Drop</span>
         </div>
 
-        <h1 className="auth-title">{mode === 'signin' ? 'Bon retour' : 'Rejoins-nous'}</h1>
+        <h1 className="auth-title">
+          {isSignup ? 'Rejoins-nous' : 'Bon retour'}
+        </h1>
         <p className="auth-subtitle">
-          {mode === 'signin' ? 'Connecte-toi pour continuer à lire.' : 'Crée ton compte et découvre des milliers de mangas.'}
+          {isSignup
+            ? 'Crée ton compte et découvre des milliers de mangas.'
+            : 'Connecte-toi pour continuer à lire.'}
         </p>
 
-        <div className="auth-tabs">
+        <div className="auth-tabs" role="tablist">
           <button
-            className={`auth-tab ${mode === 'signin' ? 'auth-tab--active' : ''}`}
-            onClick={() => { setMode('signin'); setError(''); }}
+            type="button"
+            role="tab"
+            aria-selected={mode === MODES.SIGNIN}
+            className={`auth-tab ${mode === MODES.SIGNIN ? 'auth-tab--active' : ''}`}
+            onClick={() => switchMode(MODES.SIGNIN)}
           >
             Connexion
           </button>
           <button
-            className={`auth-tab ${mode === 'signup' ? 'auth-tab--active' : ''}`}
-            onClick={() => { setMode('signup'); setError(''); }}
+            type="button"
+            role="tab"
+            aria-selected={isSignup}
+            className={`auth-tab ${isSignup ? 'auth-tab--active' : ''}`}
+            onClick={() => switchMode(MODES.SIGNUP)}
           >
             Inscription
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          {mode === 'signup' && (
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          {isSignup && (
             <div className="auth-field">
-              <label className="auth-label">Pseudo</label>
+              <label className="auth-label" htmlFor="username">Pseudo</label>
               <div className="auth-input-wrap">
-                <User size={16} />
+                <User size={16} aria-hidden="true" />
                 <input
+                  id="username"
                   name="username"
                   type="text"
                   placeholder="Ton pseudo"
                   value={formData.username}
                   onChange={handleChange}
+                  autoComplete="username"
+                  disabled={loading}
                   className="auth-input"
                 />
               </div>
@@ -123,80 +167,96 @@ export default function AuthPage() {
           )}
 
           <div className="auth-field">
-            <label className="auth-label">Email</label>
+            <label className="auth-label" htmlFor="email">Email</label>
             <div className="auth-input-wrap">
-              <Mail size={16} />
+              <Mail size={16} aria-hidden="true" />
               <input
+                id="email"
                 name="email"
                 type="email"
                 placeholder="ton@email.com"
                 value={formData.email}
                 onChange={handleChange}
+                autoComplete="email"
+                disabled={loading}
                 className="auth-input"
               />
             </div>
           </div>
 
           <div className="auth-field">
-            <label className="auth-label">Mot de passe</label>
+            <label className="auth-label" htmlFor="password">Mot de passe</label>
             <div className="auth-input-wrap">
-              <Lock size={16} />
+              <Lock size={16} aria-hidden="true" />
               <input
+                id="password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
+                disabled={loading}
                 className="auth-input"
               />
               <button
                 type="button"
                 className="auth-toggle-pw"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                disabled={loading}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {mode === 'signup' && (
+          {isSignup && (
             <div className="auth-field">
-              <label className="auth-label">Confirmer le mot de passe</label>
+              <label className="auth-label" htmlFor="passwordConfirm">Confirmer le mot de passe</label>
               <div className="auth-input-wrap">
-                <Lock size={16} />
+                <Lock size={16} aria-hidden="true" />
                 <input
+                  id="passwordConfirm"
                   name="passwordConfirm"
                   type="password"
                   placeholder="••••••••"
                   value={formData.passwordConfirm}
                   onChange={handleChange}
+                  autoComplete="new-password"
+                  disabled={loading}
                   className="auth-input"
                 />
               </div>
             </div>
           )}
 
-          {error && <p className="auth-error">{error}</p>}
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
 
           <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? (
-              <Loader2 size={18} className="auth-spinner" />
+              <Loader2 size={18} className="auth-spinner" aria-label="Chargement" />
             ) : (
               <>
-                <span>{mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}</span>
-                <ArrowRight size={16} />
+                <span>{isSignup ? 'Créer mon compte' : 'Se connecter'}</span>
+                <ArrowRight size={16} aria-hidden="true" />
               </>
             )}
           </button>
         </form>
 
         <p className="auth-switch">
-          {mode === 'signin' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
+          {isSignup ? 'Déjà un compte ? ' : 'Pas encore de compte ? '}
           <button
+            type="button"
             className="auth-switch__link"
-            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
+            onClick={() => switchMode(isSignup ? MODES.SIGNIN : MODES.SIGNUP)}
           >
-            {mode === 'signin' ? "S'inscrire" : 'Se connecter'}
+            {isSignup ? 'Se connecter' : "S'inscrire"}
           </button>
         </p>
       </div>
@@ -310,6 +370,11 @@ export default function AuthPage() {
           font-size: 15px;
           color: #0F172A;
           outline: none;
+          min-width: 0;
+        }
+        .auth-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         .auth-input::placeholder {
           color: #CBD5E1;
@@ -319,6 +384,12 @@ export default function AuthPage() {
           border: none;
           cursor: pointer;
           padding: 0;
+          display: flex;
+          align-items: center;
+        }
+        .auth-toggle-pw:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .auth-error {
           font-size: 13px;
@@ -344,9 +415,13 @@ export default function AuthPage() {
           border-radius: 10px;
           cursor: pointer;
           transition: background 0.2s;
+          margin-top: 6px;
         }
         .auth-submit:hover:not(:disabled) {
           background: #1D4ED8;
+        }
+        .auth-submit:active:not(:disabled) {
+          transform: scale(0.98);
         }
         .auth-submit:disabled {
           opacity: 0.7;
